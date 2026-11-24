@@ -1,0 +1,3 @@
+package com.integrydt.backend.controller;
+import org.springframework.jdbc.core.JdbcTemplate;import org.springframework.web.bind.annotation.*;import java.time.*;import java.util.*;
+@RestController public class HealthController {private final JdbcTemplate db;public HealthController(JdbcTemplate db){this.db=db;}@GetMapping("/health")public Object health(){try{Integer one=db.queryForObject("SELECT 1",Integer.class);return Map.of("status",one!=null&&one==1?"healthy":"degraded","database","mysql","utc",Instant.now());}catch(Exception e){return Map.of("status","unhealthy","database","mysql","error",e.getClass().getSimpleName(),"utc",Instant.now());}}}

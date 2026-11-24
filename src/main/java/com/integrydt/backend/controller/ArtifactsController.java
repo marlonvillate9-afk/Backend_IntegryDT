@@ -1,0 +1,9 @@
+package com.integrydt.backend.controller;
+
+import com.integrydt.backend.security.AuthenticatedUser;import org.springframework.core.io.FileSystemResource;import org.springframework.http.*;import org.springframework.jdbc.core.JdbcTemplate;import org.springframework.security.access.prepost.PreAuthorize;import org.springframework.security.core.Authentication;import org.springframework.web.bind.annotation.*;import java.io.File;import java.util.*;
+
+@RestController @PreAuthorize("hasAuthority('PERM_jobs.read')")
+public class ArtifactsController {private final JdbcTemplate db;public ArtifactsController(JdbcTemplate d){db=d;}
+ @GetMapping("/api/v1/jobs/{jobId}/artifacts") public Object list(@PathVariable String jobId,Authentication a){String c=((AuthenticatedUser)a.getPrincipal()).companyId();return db.queryForList("SELECT CAST(a.id AS CHAR) id,a.filename,a.content_type contentType,a.size_bytes sizeBytes,a.sha256,a.created_at createdAt,a.expires_at expiresAt FROM job_artifacts a WHERE a.job_id=? AND a.company_id=? ORDER BY a.created_at",jobId,c);}
+ @GetMapping("/api/v1/artifacts/{id}/download") public ResponseEntity<?> download(@PathVariable String id,Authentication a){String c=((AuthenticatedUser)a.getPrincipal()).companyId();var rows=db.queryForList("SELECT filename,storage_path storagePath,content_type contentType FROM job_artifacts WHERE id=? AND company_id=? AND (expires_at IS NULL OR expires_at>CURRENT_TIMESTAMP(6))",id,c);if(rows.isEmpty())return ResponseEntity.notFound().build();var r=rows.get(0);File f=new File((String)r.get("storagePath"));if(!f.isFile())return ResponseEntity.notFound().build();return ResponseEntity.ok().contentType(MediaType.parseMediaType((String)r.get("contentType"))).header(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=\""+((String)r.get("filename")).replace("\"","")+"\"").contentLength(f.length()).body(new FileSystemResource(f));}
+}
